@@ -1,6 +1,38 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createApp } from './app.js';
+import { createApp, publicApplication, adminApplication } from './app.js';
+
+test('public mentor application responses hide internal reviewer notes', () => {
+  const application = {
+    _id: '507f1f77bcf86cd799439011',
+    pathway: 'senior',
+    skills: ['Python'],
+    evidence: 'Academic experience',
+    academicYear: 'third',
+    cohortYear: 2024,
+    identityStatus: 'verified',
+    status: 'eligibility_review',
+    recommendationCount: 0,
+    reviewerNotes: 'Internal concern: verify the submitted document.',
+    createdAt: new Date(),
+    updatedAt: new Date()
+  };
+
+  const publicResponse = publicApplication(application);
+  const adminResponse = adminApplication(application);
+
+  assert.equal(
+    Object.hasOwn(publicResponse, 'reviewerNotes'),
+    false,
+    'Public responses must not expose internal reviewer notes'
+  );
+
+  assert.equal(
+    adminResponse.reviewerNotes,
+    'Internal concern: verify the submitted document.',
+    'Administrative responses must retain reviewer notes'
+  );
+});
 
 async function withServer(run) {
   const app = createApp();

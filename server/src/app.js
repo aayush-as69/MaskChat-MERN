@@ -52,7 +52,28 @@ function detectFileType(buffer) {
   return null;
 }
 function safeForumText(value) { return String(value || '').replace(/<[^>]*>/g, '').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '').trim(); }
-function publicApplication(app) { return { id: String(app._id), pathway: app.pathway, skills: app.skills, evidence: app.evidence, academicYear: app.academicYear, cohortYear: app.cohortYear, identityStatus: app.identityStatus, status: app.status, recommendationCount: app.recommendationCount || 0, reviewerNotes: app.reviewerNotes, createdAt: app.createdAt, updatedAt: app.updatedAt }; }
+export function publicApplication(app) {
+  return {
+    id: String(app._id),
+    pathway: app.pathway,
+    skills: app.skills,
+    evidence: app.evidence,
+    academicYear: app.academicYear,
+    cohortYear: app.cohortYear,
+    identityStatus: app.identityStatus,
+    status: app.status,
+    recommendationCount: app.recommendationCount || 0,
+    createdAt: app.createdAt,
+    updatedAt: app.updatedAt
+  };
+}
+
+export function adminApplication(app) {
+  return {
+    ...publicApplication(app),
+    reviewerNotes: app.reviewerNotes
+  };
+}
 function publicSession(session) {
   if (!session) return null;
   const safe = typeof session.toObject === 'function' ? session.toObject() : { ...session };
@@ -684,7 +705,7 @@ export function createApp() {
       if (req.user.role === 'institution_admin') applicationFilter.institution = req.user.institution;
       const applications = await MentorApplication.find(applicationFilter).select('+document.storageName').sort({ createdAt: 1 }).populate('applicant', 'alias institution role createdAt');
       const counts = await Promise.all(applications.map((a) => qualifyingRecommendationCount(a._id, a.institution)));
-      res.json({ applications: applications.map((a, index) => ({ ...publicApplication(a), applicant: a.applicant ? { id: String(a.applicant._id), alias: a.applicant.alias, institution: a.applicant.institution, role: a.applicant.role } : null, recommendationCount: counts[index] || 0, documentAvailable: Boolean(a.document?.storageName) })) });
+      res.json({ applications: applications.map((a, index) => ({ ...adminApplication(a), applicant: a.applicant ? { id: String(a.applicant._id), alias: a.applicant.alias, institution: a.applicant.institution, role: a.applicant.role } : null, recommendationCount: counts[index] || 0, documentAvailable: Boolean(a.document?.storageName) })) });
     } catch (err) { next(err); }
   });
 
@@ -752,7 +773,7 @@ export function createApp() {
       if (rejectedDocumentStorageName) await fs.unlink(path.join(idStorageDir(), path.basename(rejectedDocumentStorageName))).catch(() => {});
       await AuditLog.create({ actor: req.user._id, action: `mentor_application.${input.decision}`, targetType: 'MentorApplication', targetId: String(application._id), metadata: { pathway: application.pathway } });
       await Notification.create({ user: application.applicant, kind: 'mentor_application_update', message: `Your mentor application status is now ${application.status.replaceAll('_', ' ')}.` });
-      res.json({ application: publicApplication(application) });
+      res.json({ application: adminApplication(application) });
     } catch (err) { next(err); }
   });
 
