@@ -1,0 +1,29 @@
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - maskchat-mongo:/data/db
+  api:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      - mongo
+    volumes:
+      - maskchat-private-uploads:/app/server/private-uploads
+    ports:
+      - "4000:4000"
+    environment:
+      NODE_ENV: development
+      PORT: 4000
+      CLIENT_ORIGIN: http://localhost:5173
+      MONGODB_URI: mongodb://mongo:27017/maskchat
+      COOKIE_SECRET: local-compose-secret-change-before-use-123456789
+      COOKIE_SECURE: "false"
+      ALLOW_DEV_AUTH: "true"
+      PRIVATE_UPLOAD_DIR: /app/server/private-uploads
+volumes:
+  maskchat-mongo:
+  maskchat-private-uploads:
