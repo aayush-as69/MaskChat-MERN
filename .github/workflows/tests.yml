@@ -1,4 +1,3 @@
-```yaml
 name: MaskChat Tests
 
 on:
@@ -28,4 +27,6 @@ jobs:
 
       - name: Run tests
         run: npm test
-```
+
+      - name: Build frontend
+        run: npm run build
