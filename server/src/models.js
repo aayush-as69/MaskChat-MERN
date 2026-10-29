@@ -204,7 +204,7 @@ aiUsageSchema.index({ user: 1, createdAt: -1 });
 
 
 const matchRequestSchema = new Schema({
-  requester: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+  requester: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   institution: { type: String, required: true, index: true, maxlength: 120 },
   topic: { type: String, required: true, trim: true, maxlength: 100 },
   format: { type: String, enum: ['individual', 'group'], default: 'individual' },
