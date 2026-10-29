@@ -72,6 +72,9 @@ function publicForumPost(post, currentUserId) {
 
 export function createApp() {
   const app = express();
+  const aiLimiter = rateLimit({ windowMs: 60_000, limit: 8, standardHeaders: true, legacyHeaders: false });
+  const forumWriteLimiter = rateLimit({ windowMs: 60_000, limit: 20, standardHeaders: true, legacyHeaders: false });
+  const idUploadLimiter = rateLimit({ windowMs: 60 * 60_000, limit: 5, standardHeaders: true, legacyHeaders: false });
   app.disable('x-powered-by');
   app.use(helmet());
   app.use(cors({ origin: config.CLIENT_ORIGIN, credentials: true }));
@@ -921,9 +924,6 @@ export function createApp() {
   });
 
   // Server-side LLM gateway. API credentials never leave the backend.
-  const aiLimiter = rateLimit({ windowMs: 60_000, limit: 8, standardHeaders: true, legacyHeaders: false });
-  const forumWriteLimiter = rateLimit({ windowMs: 60_000, limit: 20, standardHeaders: true, legacyHeaders: false });
-  const idUploadLimiter = rateLimit({ windowMs: 60 * 60_000, limit: 5, standardHeaders: true, legacyHeaders: false });
   app.post('/api/v1/ai/ask', requireAuth, aiLimiter, async (req, res, next) => {
     try {
       const input = z.object({ prompt: z.string().trim().min(5).max(4000) }).strict().parse(req.body);
