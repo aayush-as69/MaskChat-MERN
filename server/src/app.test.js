@@ -116,3 +116,22 @@ test('new mentor, forum, and AI surfaces reject anonymous requests', async () =>
     }
   });
 });
+
+test('demo access is off by default and cannot be used to sign in', async () => {
+  await withServer(async (base) => {
+    const config = await (await fetch(`${base}/api/v1/auth/demo`)).json();
+    assert.equal(config.enabled, false);
+    assert.deepEqual(config.accounts, []);
+
+    const tokenResponse = await fetch(`${base}/api/v1/csrf`);
+    const { csrfToken } = await tokenResponse.json();
+    const cookie = tokenResponse.headers.get('set-cookie').split(';')[0];
+    const response = await fetch(`${base}/api/v1/auth/demo`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Origin: 'http://localhost:5173', Cookie: cookie, 'X-CSRF-Token': csrfToken },
+      body: JSON.stringify({ role: 'student' })
+    });
+    assert.equal(response.status, 404);
+    assert.ok(!(response.headers.get('set-cookie') || '').includes('maskchat_session'));
+  });
+});

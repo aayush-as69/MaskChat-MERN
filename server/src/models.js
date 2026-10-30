@@ -16,6 +16,8 @@ const userSchema = new Schema({
   year: { type: Number, min: 1, max: 8 },
   interests: [{ type: String, trim: true, maxlength: 40 }],
   isBanned: { type: Boolean, default: false, index: true },
+  // Shared public-demo accounts. Only usable through POST /auth/demo while DEMO_MODE=true.
+  isDemo: { type: Boolean, default: false, index: true },
   createdAt: { type: Date, default: Date.now }
 }, { timestamps: true, strict: 'throw' });
 userSchema.index({ institution: 1, role: 1, isBanned: 1 });

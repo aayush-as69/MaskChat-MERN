@@ -15,6 +15,9 @@
 - Forum posts/replies are institution-scoped, validated, rendered as text in React, and can be reported to the moderation queue.
 - The AI gateway keeps provider credentials server-side, applies limits, rejects obvious email/phone patterns, and does not automatically attach account identity or chat history.
 
+## Public demo accounts
+When `DEMO_MODE=true`, two shared `isDemo` accounts (student, mentor) can be entered via `POST /api/v1/auth/demo`. They are passwordless, institution-scoped to "Demo University", limited to short-lived sessions carrying a `demo` claim, and rejected by `requireAuth` and the Socket.IO handshake if `DEMO_MODE` is off or the token lacks that claim. Global moderation and admin surfaces are not reachable, and reports, mentor applications, ID uploads, recommendations and AI calls are blocked for them. Because the accounts are shared, treat everything entered in the demo as public.
+
 ## Important limitations
 
 - A live institutional OIDC/SSO or trusted-token integration is not connected to the MERN backend. Production registration remains disabled and production auth rejects users without a trusted `institutionVerifiedAt` value. Do not manually set that field to bypass institutional verification.

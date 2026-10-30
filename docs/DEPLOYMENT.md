@@ -46,6 +46,9 @@ Set at least:
 
 The example user email domain in the project brief (`galgotiacollege.edu`) differs from the reference archive's documented default (`galgotiacollege.edu.in`). Confirm the official domain with the institution before setting `INSTITUTION_DOMAINS`. Do not enable multiple lookalike domains merely to make signup pass.
 
+## Public demo access
+Optional. Set `DEMO_MODE=true` (and optionally `DEMO_SESSION_MINUTES`) in the backend environment and redeploy the backend; no frontend change or seed run is needed. The frontend discovers it through `GET /api/v1/auth/demo` and shows the demo buttons. It is independent of `ALLOW_DEV_AUTH`, which must stay `false` in production. Demo users are `isDemo` accounts in "Demo University" with no password; they bypass only the institutional-verification gate and are blocked from reports, mentor applications, ID upload, recommendations and AI. Remove the demo data by deleting users with `isDemo: true` and their records if you retire the feature. See README "Public demo access".
+
 ## Private ID storage
 
 The current adapter writes ID files to `PRIVATE_UPLOAD_DIR`, outside the frontend's public directory. In production, the path must be a private persistent volume with strict OS access controls. A filesystem on an ephemeral host is not sufficient for a durable verification workflow. Before production, configure a private object-storage adapter if persistent private volumes are not available, and define backups and retention/deletion jobs. Never expose a static public URL for an ID document.

@@ -44,6 +44,15 @@ Demo accounts (development only):
 
 These accounts are for local demonstrations only. Do not deploy them or use their passwords in production. Seeded mentor is available. Demo records are only created by running the seed script.
 
+## Public demo access (deployed sites)
+Set `DEMO_MODE=true` on the backend to show **Try the demo** on the landing page and **Explore as student / mentor** on the sign-in page. Visitors are signed into shared demo accounts without a password; no seed step is needed because the accounts are created on first use. Unlike the seed accounts above, this is designed to run on a deployed backend:
+- Only a student and a mentor demo account exist. There are no demo moderator or admin accounts.
+- Demo accounts belong to "Demo University", so matching, mentor discovery, group sessions and the forum never mix with real institutions.
+- They have no usable password (password login is rejected) and sessions last `DEMO_SESSION_MINUTES` (default 120).
+- Reports, mentor applications, ID uploads, mentor recommendations and the AI assistant return 403 for demo accounts.
+- Setting `DEMO_MODE=false` immediately invalidates every active demo session, including its sockets.
+- The accounts are shared, so visitors can see each other's demo chats and forum posts.
+
 ## Build and tests
 ```bash
 npm run build
