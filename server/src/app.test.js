@@ -101,6 +101,7 @@ test('new mentor, forum, and AI surfaces reject anonymous requests', async () =>
       '/api/v1/mentor-applications/me',
       '/api/v1/mentor-applications/recommendable',
       '/api/v1/admin/mentor-applications',
+      '/api/v1/admin/mentor-applications/507f1f77bcf86cd799439011/document',
       '/api/v1/forum/categories',
       '/api/v1/forum/posts',
       '/api/v1/matching/queue/me',
