@@ -13,6 +13,7 @@ const schema = z.object({
   HTTP_P95_ALERT_MS: z.coerce.number().min(100).max(60000).default(1500),
   EVENT_LOOP_P99_ALERT_MS: z.coerce.number().min(10).max(10000).default(250),
   COOKIE_SECURE: z.enum(['true', 'false']).default('false'),
+  COOKIE_SAMESITE: z.enum(['lax', 'none']).default('lax'),
   ALLOW_DEV_AUTH: z.enum(['true', 'false']).default('true'),
   DEMO_MODE: z.enum(['true', 'false']).default('false'),
   DEMO_SESSION_MINUTES: z.coerce.number().int().min(5).max(480).default(120),
