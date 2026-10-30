@@ -7,9 +7,9 @@ import { config } from './config.js';
 const COOKIE = 'maskchat_session';
 export const CSRF_COOKIE = 'maskchat_csrf';
 export function createCsrfToken() { return crypto.randomBytes(32).toString('hex'); }
-export function csrfCookieOptions() { return { httpOnly: false, secure: config.COOKIE_SECURE, sameSite: 'lax', path: '/', maxAge: 1000 * 60 * 60 * 12 }; }
+export function csrfCookieOptions() { return { httpOnly: false, secure: config.COOKIE_SECURE, sameSite: 'config.COOKIE_SAMESITE', path: '/', maxAge: 1000 * 60 * 60 * 12 }; }
 export const cookieOptions = (maxAge = 1000 * 60 * 60 * 12) => ({
-  httpOnly: true, secure: config.COOKIE_SECURE, sameSite: 'lax',
+  httpOnly: true, secure: config.COOKIE_SECURE, sameSite: 'config.COOKIE_SAMESITE',
   path: '/', maxAge
 });
 export function signSession(user, { demo = false } = {}) {
