@@ -101,6 +101,7 @@ test('new mentor, forum, and AI surfaces reject anonymous requests', async () =>
       '/api/v1/mentor-applications/me',
       '/api/v1/mentor-applications/recommendable',
       '/api/v1/admin/mentor-applications',
+      '/api/v1/admin/mentor-applications/507f1f77bcf86cd799439011/document',
       '/api/v1/forum/categories',
       '/api/v1/forum/posts',
       '/api/v1/matching/queue/me',
@@ -114,5 +115,24 @@ test('new mentor, forum, and AI surfaces reject anonymous requests', async () =>
       const response = await fetch(`${base}${route}`);
       assert.equal(response.status, 401, `${route} should require authentication`);
     }
+  });
+});
+
+test('demo access is off by default and cannot be used to sign in', async () => {
+  await withServer(async (base) => {
+    const config = await (await fetch(`${base}/api/v1/auth/demo`)).json();
+    assert.equal(config.enabled, false);
+    assert.deepEqual(config.accounts, []);
+
+    const tokenResponse = await fetch(`${base}/api/v1/csrf`);
+    const { csrfToken } = await tokenResponse.json();
+    const cookie = tokenResponse.headers.get('set-cookie').split(';')[0];
+    const response = await fetch(`${base}/api/v1/auth/demo`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Origin: 'http://localhost:5173', Cookie: cookie, 'X-CSRF-Token': csrfToken },
+      body: JSON.stringify({ role: 'student' })
+    });
+    assert.equal(response.status, 404);
+    assert.ok(!(response.headers.get('set-cookie') || '').includes('maskchat_session'));
   });
 });

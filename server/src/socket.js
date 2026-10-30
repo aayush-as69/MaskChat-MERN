@@ -25,7 +25,9 @@ export function attachSocketServer(httpServer) {
       if (!token) return next(new Error('Authentication required'));
       const payload = jwt.verify(decodeURIComponent(token), config.COOKIE_SECRET, { issuer: 'maskchat' });
       const user = await User.findById(payload.sub).select('+institutionVerifiedAt');
-      if (!user || user.isBanned || (config.NODE_ENV === 'production' && !user.institutionVerifiedAt)) return next(new Error('Authentication required'));
+      if (!user || user.isBanned) return next(new Error('Authentication required'));
+      if (user.isDemo) { if (!config.DEMO_MODE || payload.demo !== true) return next(new Error('Authentication required')); }
+      else if (config.NODE_ENV === 'production' && !user.institutionVerifiedAt) return next(new Error('Authentication required'));
       socket.data.user = { id: String(user._id), alias: user.alias, role: user.role };
       next();
     } catch { next(new Error('Authentication required')); }

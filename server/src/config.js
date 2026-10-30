@@ -14,6 +14,8 @@ const schema = z.object({
   EVENT_LOOP_P99_ALERT_MS: z.coerce.number().min(10).max(10000).default(250),
   COOKIE_SECURE: z.enum(['true', 'false']).default('false'),
   ALLOW_DEV_AUTH: z.enum(['true', 'false']).default('true'),
+  DEMO_MODE: z.enum(['true', 'false']).default('false'),
+  DEMO_SESSION_MINUTES: z.coerce.number().int().min(5).max(480).default(120),
   ADMIN_EMAIL: z.string().email().default('moderator@example.edu'),
   INSTITUTION_DOMAINS: z.string().default('galgotiacollege.edu'),
   INSTITUTION_EMAIL_PATTERN: z.string().min(1).default('^[^.]+\\.(?<cohort>\\d{2})(?<institutionCode>[a-z]{3})(?<degreeCode>[a-z])(?<programCode>[a-z]{2,5})(?<studentCode>\\d+)@(?<domain>[^@]+)$'),
@@ -36,6 +38,7 @@ export const config = {
   CLIENT_ORIGIN: new URL(parsed.data.CLIENT_ORIGIN).origin,
   COOKIE_SECURE: parsed.data.COOKIE_SECURE === 'true',
   ALLOW_DEV_AUTH: parsed.data.ALLOW_DEV_AUTH === 'true',
+  DEMO_MODE: parsed.data.DEMO_MODE === 'true',
   INSTITUTION_DOMAINS: parsed.data.INSTITUTION_DOMAINS.split(',').map((x) => x.trim().toLowerCase()).filter(Boolean),
   INSTITUTION_EMAIL_PATTERN: parsed.data.INSTITUTION_EMAIL_PATTERN,
   REQUIRE_INSTITUTION_DOMAIN: parsed.data.REQUIRE_INSTITUTION_DOMAIN === 'true'

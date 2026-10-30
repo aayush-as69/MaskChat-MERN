@@ -9,8 +9,9 @@ import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
 import { User, MentorProfile, Session, Conversation, Message, Report, UserBlock, Notification, AuditLog, MentorApplication, MentorRecommendation, ForumCategory, ForumPost, ForumReply, ForumVote, AIUsage, MatchRequest, OperationalIncident } from './models.js';
 import { config } from './config.js';
-import { requireAuth, requireRole, hashPassword, checkPassword, setSessionCookie, clearSessionCookie, publicUser, CSRF_COOKIE, createCsrfToken, csrfCookieOptions } from './auth.js';
+import { requireAuth, requireRole, blockDemo, hashPassword, checkPassword, setSessionCookie, clearSessionCookie, publicUser, CSRF_COOKIE, createCsrfToken, csrfCookieOptions } from './auth.js';
 import { rankMentors } from './matching.js';
+import { ensureDemoUser, demoAccountList, DEMO_ACCOUNTS } from './demo.js';
 import { observeHttp, snapshot as metricsSnapshot, evaluateAlerts, incrementMetric, timed, elapsed } from './observability.js';
 
 const defaultForumCategories = [
@@ -149,9 +150,23 @@ export function createApp() {
     try {
       const input = z.object({ email: z.string().email().transform((v) => v.toLowerCase()), password: z.string().min(1).max(128) }).parse(req.body);
       const user = await User.findOne({ email: input.email }).select('+passwordHash +email +institutionVerifiedAt');
-      if (!user || !(await checkPassword(input.password, user.passwordHash)) || user.isBanned) return res.status(401).json({ error: 'Invalid email or password' });
+      if (!user || user.isDemo || !(await checkPassword(input.password, user.passwordHash)) || user.isBanned) return res.status(401).json({ error: 'Invalid email or password' });
       if (config.NODE_ENV === 'production' && !user.institutionVerifiedAt) return res.status(403).json({ error: 'Institutional identity has not been verified. Use your institution sign-in.' });
       setSessionCookie(res, user);
+      res.json({ user: publicUser(user) });
+    } catch (err) { next(err); }
+  });
+  // Public demo access (opt-in via DEMO_MODE=true). Signs the visitor into a shared, sandboxed demo account.
+  app.get('/api/v1/auth/demo', (_req, res) => {
+    res.set('Cache-Control', 'no-store').json({ enabled: config.DEMO_MODE, accounts: config.DEMO_MODE ? demoAccountList() : [], sessionMinutes: config.DEMO_SESSION_MINUTES });
+  });
+  app.post('/api/v1/auth/demo', async (req, res, next) => {
+    try {
+      if (!config.DEMO_MODE) return res.status(404).json({ error: 'Demo access is not enabled.' });
+      const input = z.object({ role: z.enum(Object.keys(DEMO_ACCOUNTS)) }).strict().parse(req.body);
+      const user = await ensureDemoUser(input.role);
+      if (!user || user.isBanned) return res.status(503).json({ error: 'The demo account is temporarily unavailable.' });
+      setSessionCookie(res, user, { demo: true });
       res.json({ user: publicUser(user) });
     } catch (err) { next(err); }
   });
@@ -581,7 +596,7 @@ export function createApp() {
     } catch (err) { next(err); }
   });
 
-  app.post('/api/v1/reports', requireAuth, async (req, res, next) => {
+  app.post('/api/v1/reports', requireAuth, blockDemo, async (req, res, next) => {
     try {
       const input = z.object({ reportedUserId: z.string().regex(/^[a-f\d]{24}$/i), conversationId: z.string().regex(/^[a-f\d]{24}$/i).optional(), messageId: z.string().regex(/^[a-f\d]{24}$/i).optional(), reason: z.enum(['harassment', 'inappropriate_content', 'safety_concern', 'spam', 'other']), details: z.string().max(1500).default('') }).parse(req.body);
       if (input.reportedUserId === String(req.user._id)) return res.status(400).json({ error: 'You cannot report yourself' });
@@ -640,7 +655,7 @@ export function createApp() {
   });
 
   // Mentor applications: users register as students and can only gain mentor privileges after approval.
-  app.post('/api/v1/mentor-applications', requireAuth, async (req, res, next) => {
+  app.post('/api/v1/mentor-applications', requireAuth, blockDemo, async (req, res, next) => {
     try {
       const input = z.object({
         pathway: z.enum(['senior', 'junior_exception']),
@@ -669,7 +684,7 @@ export function createApp() {
     } catch (err) { next(err); }
   });
 
-  app.post('/api/v1/mentor-applications/:id/id', requireAuth, idUploadLimiter, express.raw({ type: () => true, limit: '5mb' }), async (req, res, next) => {
+  app.post('/api/v1/mentor-applications/:id/id', requireAuth, blockDemo, idUploadLimiter, express.raw({ type: () => true, limit: '5mb' }), async (req, res, next) => {
     try {
       if (!isObjectId(req.params.id)) return res.status(400).json({ error: 'Invalid application ID' });
       const application = await MentorApplication.findOne({ _id: req.params.id, applicant: req.user._id }).select('+document.storageName');
@@ -789,7 +804,7 @@ export function createApp() {
     } catch (err) { next(err); }
   });
 
-  app.post('/api/v1/mentor-applications/:id/recommendations', requireAuth, requireRole('mentor'), async (req, res, next) => {
+  app.post('/api/v1/mentor-applications/:id/recommendations', requireAuth, blockDemo, requireRole('mentor'), async (req, res, next) => {
     try {
       if (!isObjectId(req.params.id)) return res.status(400).json({ error: 'Invalid application ID' });
       const input = z.object({ decision: z.enum(['recommend', 'decline']), rationale: z.string().trim().min(20).max(1200) }).strict().parse(req.body);
@@ -945,7 +960,7 @@ export function createApp() {
   });
 
   // Server-side LLM gateway. API credentials never leave the backend.
-  app.post('/api/v1/ai/ask', requireAuth, aiLimiter, async (req, res, next) => {
+  app.post('/api/v1/ai/ask', requireAuth, blockDemo, aiLimiter, async (req, res, next) => {
     try {
       const input = z.object({ prompt: z.string().trim().min(5).max(4000) }).strict().parse(req.body);
       if (!config.AI_API_KEY) return res.status(503).json({ error: 'AI assistance is not configured yet. MaskChat remains available without it.' });
