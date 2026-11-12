@@ -1,108 +1,147 @@
-# MaskChat — MERN Rebuild
+# MaskChat — MERN
 
-A privacy-first peer mentorship platform. This repository is a clean MERN reimplementation based on the uploaded MaskChat reference archive.
+> **Privacy-first peer mentorship for verified campus communities.**
 
-## Stack
-- React 18 + Vite + React Router
-- Node.js + Express
-- MongoDB + Mongoose
-- Socket.IO for authenticated real-time messaging
-- Zod validation, HttpOnly JWT session cookies, bcrypt password hashing
-- Vitest / Node test runner
+MaskChat connects students with approved senior mentors without exposing their identities to each other. This MERN implementation provides institution-scoped matching, real-time conversations, mentor verification, moderation, community features, group sessions and an optional AI study assistant.
 
-## Requirements
-- Node.js 20+
-- npm 10+
-- MongoDB locally or MongoDB Atlas
+## Core features
+
+| Area | Implementation |
+|---|---|
+| Authentication | HttpOnly session cookies, password hashing, CSRF/origin protection |
+| Identity privacy | Stable anonymous display aliases and identity separation |
+| Mentor verification | Institutional ID upload, admin review, approval, suspension and revocation |
+| Matching | Institution/topic/availability matching plus persisted queue and ranked offers |
+| Mentoring | 1:1 sessions, group sessions, invitations, capacity and lifecycle controls |
+| Realtime | Authenticated Socket.IO rooms with membership checks |
+| Safety | Content checks, reports, blocks, moderation and audit events |
+| Community | Institution-scoped forum with posts, replies, votes and accepted answers |
+| AI | Optional server-side AI Study Assistant |
+| Operations | Health/readiness endpoints, bounded metrics and incident records |
+
+## Architecture
+
+~~~text
+React + Vite
+      │
+      ├── REST ───────────────┐
+      └── Socket.IO ──────────┤
+                               ▼
+                         Express / Node
+                               │
+              ┌────────────────┼────────────────┐
+              ▼                ▼                ▼
+          Auth/RBAC         Matching         Moderation
+              │                │                │
+              └────────────────┼────────────────┘
+                               ▼
+                         MongoDB/Mongoose
+~~~
+
+The backend is the security boundary. UI controls are not authorization controls.
+
+## Project structure
+
+~~~text
+client/       React 18 + Vite frontend
+server/       Express API, auth, matching, moderation and Socket.IO
+docs/         Architecture, security, testing and operations documentation
+scripts/      Seed, migration, backup and verification utilities
+deploy/       Deployment and reverse-proxy configuration
+~~~
 
 ## Quick start
-1. Copy `server/.env.example` to `server/.env` and `client/.env.example` to `client/.env`.
-2. Set `MONGODB_URI` in `server/.env` to your MongoDB connection string.
-3. Install dependencies from the repository root:
-   ```bash
-   npm install
-   ```
-4. Start the API and frontend in separate terminals:
-   ```bash
-   npm run dev:server
-   npm run dev:client
-   ```
-5. Open `http://localhost:5173`.
 
-The API defaults to `http://localhost:4000`. The Vite client proxies no API requests automatically; set `client/.env` with `VITE_API_URL=http://localhost:4000` if needed.
+Requirements: Node.js 20+, npm 10+, and MongoDB locally or MongoDB Atlas.
 
-## Demo seed data
-With MongoDB running and `.env` configured:
-```bash
+~~~bash
+npm install
+~~~
+
+Copy server/.env.example to server/.env and client/.env.example to client/.env. Set MONGODB_URI in the server environment.
+
+~~~bash
+npm run dev:server
+npm run dev:client
+~~~
+
+Open http://localhost:5173. The API normally runs on http://localhost:4000.
+
+### Local demo
+
+~~~bash
 npm run seed
-```
-Demo accounts (development only):
-- `student@demo.edu` / `StudentDemo123!`
-- `mentor@demo.edu` / `MentorDemo123!`
-- `moderator@demo.edu` / `ModeratorDemo123!`
-- `admin@demo.edu` / `AdminDemo123!` (mentor verification review UI)
+~~~
 
-These accounts are for local demonstrations only. Do not deploy them or use their passwords in production. Seeded mentor is available. Demo records are only created by running the seed script.
+Seed credentials are for local development only and must never be deployed.
 
-## Public demo access (deployed sites)
-Set `DEMO_MODE=true` on the backend to show **Try the demo** on the landing page and **Explore as student / mentor** on the sign-in page. Visitors are signed into shared demo accounts without a password; no seed step is needed because the accounts are created on first use. Unlike the seed accounts above, this is designed to run on a deployed backend:
-- Only a student and a mentor demo account exist. There are no demo moderator or admin accounts.
-- Demo accounts belong to "Demo University", so matching, mentor discovery, group sessions and the forum never mix with real institutions.
-- They have no usable password (password login is rejected) and sessions last `DEMO_SESSION_MINUTES` (default 120).
-- Reports, mentor applications, ID uploads, mentor recommendations and the AI assistant return 403 for demo accounts.
-- Setting `DEMO_MODE=false` immediately invalidates every active demo session, including its sockets.
-- The accounts are shared, so visitors can see each other's demo chats and forum posts.
+## Public demo mode
 
-## Build and tests
-```bash
-npm run build
+DEMO_MODE can expose a controlled Try the demo flow. Demo accounts are isolated to Demo University and cannot perform sensitive actions such as mentor verification or ID uploads. Demo sessions are temporary and are invalidated when demo mode is disabled.
+
+## Security
+
+- Server-side role and institution checks.
+- HttpOnly session cookies and bcrypt password hashing.
+- Origin validation and CSRF protection for state-changing browser requests.
+- Socket.IO membership checks before message delivery.
+- Mentor approval required before mentor capabilities become active.
+- Private storage is required for institutional ID images in production.
+- MongoDB Atlas should use least-privilege credentials and restricted network access.
+- Secrets must remain outside source control.
+
+See docs/SECURITY_PRIVACY.md before deployment.
+
+## Testing
+
+~~~bash
 npm test
-```
-The test suite includes matching unit tests, health/auth-protection checks, and CSRF origin/token regression tests. It does not yet constitute full end-to-end verification of every workflow. MongoDB-backed API and Socket.IO flows must be tested against a dedicated test database before production use. Run `npm test` and `npm run build` after installing dependencies.
+npm run build
+~~~
 
-## Features implemented in this rebuild
-- Registration/login/logout with HttpOnly session cookie and password hashing.
-- Role-protected student, mentor, and moderator views.
-- Mentor discovery with deterministic topic/institution/availability matching.
-- Session request, accept/decline, start, cancel, and completion transitions.
-- Conversation creation when a session is accepted.
-- Socket.IO chat with membership checks, persisted messages, duplicate client-message protection, and privacy-oriented content checks.
-- Reports, blocks, notifications, moderator report review, and audit entries for report updates.
-- Mentor application workflow with private institutional ID upload, admin review, approval gating, suspension/revocation, and junior mentor recommendations.
-- Institution-scoped community forum with categories, posts, replies, helpful votes, accepted-answer endpoint, and reporting.
-- Optional server-side AI Study Assistant using an OpenAI-compatible provider; API keys remain on the backend.
-- Responsive dark-first UI and persisted light/dark theme preference.
-- Health and database readiness endpoints.
+The repository includes server unit/security regression tests and frontend build validation. Production readiness additionally requires dedicated database integration testing, Socket.IO end-to-end testing and final-host smoke testing.
+
+## Deployment
+
+~~~text
+Vercel / static frontend
+          │ HTTPS
+          ▼
+Persistent Node + Express host
+          │
+          ├── Socket.IO
+          └── MongoDB Atlas
+~~~
+
+The backend must run on a host that supports persistent WebSocket connections. See docs/DEPLOYMENT.md for the complete configuration.
 
 ## Important limitations
-- Institutional verification and OIDC/SSO are not connected to a real institution. Development registration is explicitly local-only; production registration is disabled and production sessions reject users without a trusted `institutionVerifiedAt` timestamp. Implement and test real institutional SSO before production use.
-- Email, SMS, reminders, external AI moderation, and external notification providers are not configured. AI Study Assistant requires `AI_API_KEY` and has not been live-tested.
-- Group sessions now support multiple participants, scheduling, capacity limits, join deadlines, invitations, shared chat, and host lifecycle controls. These flows still require full runtime/end-to-end testing before production use.
-- ID files use a private filesystem adapter. Production requires a private persistent volume or a private object-storage adapter plus a retention/deletion policy. ID images are not automatically authenticated by software.
-- Report evidence is validated against conversation membership and message authorship. Blocking is enforced in matching, session requests/transitions, and chat sends. UI-level report/block shortcuts and automated ban/suspension controls still need completing.
-- Redis-based distributed Socket.IO coordination is not configured. Use one persistent backend instance unless you configure and test a compatible adapter.
-- Production readiness is not asserted until deployment secrets, database access rules, full integration tests, security review, and hosting smoke tests are completed.
 
-## Deployment overview
-- Deploy `client/` to Vercel as a Vite static site. Set `VITE_API_URL` to the HTTPS backend origin and configure SPA rewrites.
-- Deploy `server/` to a persistent Node host supporting WebSockets (for example, Render, Railway, or a VM). Set `MONGODB_URI`, `CLIENT_ORIGIN`, `COOKIE_SECRET`, `COOKIE_SECURE=true`, `ALLOW_DEV_AUTH=false`, `NODE_ENV=production`, and `PORT` as required by the host.
-- Use a same-site frontend/backend domain arrangement where possible. State-changing browser API calls require the configured frontend Origin and a double-submit CSRF token. Verify cookie and CSRF behavior on the final domains before production.
-- Add MongoDB Atlas database users with least privilege and a restricted network access policy. Never commit secrets.
+- Institutional SSO/OIDC is not connected to a real college identity provider.
+- Development registration is local-only; production requires trusted institutional verification.
+- The AI assistant depends on an external provider and is not a production safety system.
+- Distributed Socket.IO/Redis coordination is not configured.
+- Institutional ID storage requires production-grade private storage and retention controls.
+- Some moderation/report/block flows still need additional end-to-end validation.
+- Operational metrics are process-local unless an external metrics store is configured.
 
-## Reference
-See `docs/FEATURE_PARITY_AUDIT.md`, `docs/MENTOR_VERIFICATION.md`, `docs/AI_INTEGRATION.md`, `docs/FINAL_TEST_REPORT.md`, `docs/REVIEW_REFINEMENTS.md`, `docs/DEPLOYMENT.md`, `docs/SECURITY_PRIVACY.md`, `docs/SSO_SETUP.md`, and `docs/TESTING.md`.
+## Documentation
 
+Start with docs/README.md.
 
-## Matching queue, group sessions, and operations
+- docs/FEATURE_PARITY_AUDIT.md — feature inventory
+- docs/MENTOR_VERIFICATION.md — mentor verification
+- docs/MATCHING_GROUPS_OPERATIONS.md — matching, groups and operations
+- docs/AI_INTEGRATION.md — AI assistant
+- docs/SECURITY_PRIVACY.md — security and privacy
+- docs/TESTING.md — test strategy
+- docs/DEPLOYMENT.md — deployment
+- docs/SSO_SETUP.md — institutional authentication
 
-The MERN build now includes a persisted mentor-matching queue with institution and block checks, approved-mentor eligibility, ranked candidate offers, 15-minute offer expiry, mentor accept/decline, requester cancellation/refresh, and a background worker that retries queued requests. The worker is intended for a single active backend instance until distributed locking/worker deployment is validated. Stale queue claims and interrupted acceptance flows have recovery logic, but it has not yet been stress-tested.
+## Project status
 
-Approved mentors can manage their availability and session formats from **Group sessions**, create capacity-limited group sessions, set a join deadline, invite same-institution accounts, and start, complete, update, or cancel a session. Group conversations include joined participants.
+**Pilot-stage engineering project.** The repository demonstrates the product and its security boundaries; it does not claim institutional approval, legal compliance or a completed production identity-provider integration.
 
-Admins can open **Operations & alerts** to view bounded HTTP/socket latency and error metrics, process memory/event-loop telemetry, threshold alerts, pilot-readiness gates, and a persistent incident log. Metrics are process-local and reset on restart; configure an external metrics store and alert delivery before a real pilot.
+## License
 
-Daily rotating aliases are intentionally excluded. MaskChat continues to use each user's stable anonymous display alias.
-
-See [`docs/MATCHING_GROUPS_OPERATIONS.md`](docs/MATCHING_GROUPS_OPERATIONS.md) for routes, behavior, configuration, and limitations.
-
-If upgrading a database that was used with an earlier build, run `npm --workspace server run migrate:message-idempotency` once with the intended `MONGODB_URI` before deploying the updated messaging code. See [`docs/TESTING.md`](docs/TESTING.md).
+See LICENSE.
